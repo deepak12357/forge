@@ -1,0 +1,331 @@
+FORGE ROADMAP
+Autonomous Backend Engineering Agent
+Goal:
+Build a production-style autonomous backend engineering system step-by-step while learning real systems engineering concepts progressively.
+Core Principle:
+Do NOT start with “AI agents”.
+Start with deterministic systems first.
+AI comes later.
+==================================================
+PHASE 1 — FOUNDATION ENGINEERING
+Weeks 1–3
+
+Week 1 — Forge Core Service
+Build:
+Spring Boot backend
+CRUD APIs for tasks
+PostgreSQL integration
+Task Example:
+{
+"id": 1,
+"title": "Run tests",
+"status": "CREATED"
+}
+Learn:
+Spring Boot basics
+REST APIs
+Controllers
+Services
+DTOs
+JPA/Hibernate
+PostgreSQL
+Layered architecture
+Goal:
+Understand how backend systems manage workflow state.
+
+Week 2 — Workflow State Machine
+Add:
+Task states
+State transition validation
+Retry count
+Timestamps
+States:
+CREATED
+RUNNING
+FAILED
+COMPLETED
+Learn:
+Enums
+State machines
+Service-layer validation
+Transactions
+Idempotency basics
+Goal:
+Understand that autonomous systems are state-transition systems.
+
+Week 3 — Async Execution + Logs
+Add:
+Async background execution
+Execution logs
+Live task status polling
+Example Logs:
+Task started
+Running step 1
+Running step 2
+Completed
+Learn:
+Async execution
+Thread pools
+Background jobs
+Log persistence
+Polling vs streaming
+Goal:
+Build a tiny workflow engine.
+==================================================
+PHASE 2 — EXECUTION INFRASTRUCTURE
+Weeks 4–6
+
+Week 4 — Docker Fundamentals
+Build:
+Run Docker containers from Spring Boot
+Execute shell commands
+Capture stdout/stderr
+Example:
+docker run maven:3.9 mvn test
+Learn:
+Docker lifecycle
+Container execution
+Bind mounts
+Process handling
+Container cleanup
+Goal:
+Understand execution infrastructure basics.
+
+Week 5 — Sandbox Manager
+Build:
+SandboxService with:
+Isolated execution
+Timeouts
+Log streaming
+Kill stuck containers
+Learn:
+Isolation concepts
+Timeout handling
+Resource management
+Safe execution
+Goal:
+Create controlled execution infrastructure.
+
+Week 6 — GitHub Repo Cloning
+Build:
+Clone GitHub repositories
+Store repo metadata
+Connect repos to sandbox execution
+Learn:
+Git basics
+Filesystem management
+Repo lifecycle handling
+Goal:
+Forge can now ingest and execute repositories.
+==================================================
+PHASE 3 — REPOSITORY INTELLIGENCE
+Weeks 7–9
+
+Week 7 — Repository Scanner
+Build:
+Scanner that extracts:
+Controllers
+Services
+Repositories
+Packages
+Learn:
+Java project structure
+Spring Boot conventions
+Filesystem traversal
+Goal:
+Understand backend project structure.
+
+Week 8 — AST Parsing
+Build:
+JavaParser integration to extract:
+Classes
+Methods
+Annotations
+Dependencies
+Learn:
+AST concepts
+Static analysis
+Symbol extraction
+Goal:
+Move from text understanding to structural understanding.
+
+Week 9 — Architecture Graph
+Build:
+Dependency graph:
+Controller -> Service -> Repository
+Learn:
+Graph modeling
+Dependency relationships
+Architecture extraction
+Goal:
+Forge understands repository architecture.
+==================================================
+PHASE 4 — AI INTEGRATION
+Weeks 10–12
+
+Week 10 — AI Summarization
+Build:
+Repository summaries
+Service/class summaries
+Learn:
+Prompt engineering
+Chunking
+Token limits
+Structured outputs
+Goal:
+Introduce AI safely into deterministic workflows.
+
+Week 11 — Planning Engine
+Input:
+"Add audit logging to payment retries"
+Output:
+Structured execution plan.
+Learn:
+Planning prompts
+Workflow decomposition
+Schema validation
+Goal:
+Convert engineering tasks into executable plans.
+
+Week 12 — Code Diff Generation
+Build:
+Generate patch suggestions
+Generate diffs
+Human-reviewed changes
+Learn:
+Scoped context handling
+Controlled generation
+Diff generation
+Goal:
+Forge can propose code changes safely.
+==================================================
+PHASE 5 — AUTONOMOUS EXECUTION LOOP
+Weeks 13–15
+
+Week 13 — Automated Test Execution
+Flow:
+Generate Patch
+-> Execute Tests
+-> Collect Failures
+Learn:
+Execution pipelines
+Result classification
+Goal:
+Close the loop between generation and validation.
+
+Week 14 — Failure Analysis
+Build:
+Stacktrace parser
+Compilation error parser
+Failure categorization
+Learn:
+Debugging workflows
+Failure taxonomy
+Goal:
+Forge understands failures.
+
+Week 15 — Retry Loop
+Flow:
+Generate
+-> Execute
+-> Fail
+-> Analyze
+-> Retry
+Learn:
+Retry systems
+Recovery workflows
+Iterative debugging
+Goal:
+Forge becomes autonomous.
+==================================================
+PHASE 6 — PRODUCTION ENGINEERING
+Weeks 16–20
+
+Week 16 — Observability
+Add:
+OpenTelemetry
+Trace IDs
+Execution traces
+Learn:
+Distributed tracing
+Structured logs
+Telemetry basics
+Goal:
+Observe autonomous workflows clearly.
+
+Week 17 — Memory System
+Store:
+Previous failures
+Previous fixes
+Repository summaries
+Learn:
+Memory systems
+Retrieval concepts
+Context persistence
+Goal:
+Reduce repeated failures and improve reasoning.
+
+Week 18 — Evaluation Framework
+Measure:
+Success rate
+Retry count
+Token usage
+Patch accuracy
+Learn:
+AI evaluation
+Regression testing
+Metrics systems
+Goal:
+Measure system quality objectively.
+
+Week 19 — Reviewer Agent
+Build:
+Verification layer that checks:
+Coding conventions
+Risky changes
+Architecture violations
+Learn:
+Validation pipelines
+Guardrails
+AI verification workflows
+Goal:
+Improve reliability and safety.
+
+Week 20 — Full Workflow Demo
+Final Flow:
+Issue
+-> Plan
+-> Modify Code
+-> Execute Tests
+-> Analyze Failure
+-> Retry
+-> Success
+Goal:
+End-to-end autonomous backend engineering workflow.
+==================================================
+IMPORTANT RULES
+Do NOT rush into “multi-agent systems”.
+Do NOT start with LangChain/LangGraph tutorials.
+Build deterministic systems first.
+Every phase should work WITHOUT AI first.
+AI should enhance workflows, not replace architecture.
+Reliability > flashy demos.
+Observability is mandatory.
+State management is critical.
+Keep architecture simple early.
+Avoid hype-driven complexity.
+==================================================
+FINAL OBJECTIVE
+Forge should eventually become:
+An autonomous backend engineering platform capable of:
+understanding Java repositories,
+planning engineering tasks,
+generating code changes,
+executing tests in isolated Docker sandboxes,
+debugging failures autonomously,
+retrying fixes,
+maintaining workflow memory,
+and providing full observability.
+
+
+
