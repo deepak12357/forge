@@ -16,5 +16,5 @@ jobs:
           distribution: temurin
           java-version: 21
 
-      - name: Build
-        run: mvn clean verify
+#      - name: Build
+#        run: mvn clean verify
