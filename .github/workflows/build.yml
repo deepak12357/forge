@@ -25,5 +25,8 @@ jobs:
           java-version: 21
           cache: maven
 
+      - name: Make Maven Wrapper Executable
+        run: chmod +x mvnw
+
       - name: Verify
         run: ./mvnw -B spotless:check verify
