@@ -1,10 +1,10 @@
-package com.forge.demo;
+package com.forge;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
-class DemoApplicationTests {
+class ForgeApplicationTests {
 
 	@Test
 	void contextLoads() {
