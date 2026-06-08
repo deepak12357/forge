@@ -11,17 +11,17 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/repo")
 public class RepoController {
-    private final RepoIngestionService repoIngestionService;
+  private final RepoIngestionService repoIngestionService;
 
-    public RepoController(RepoIngestionService repoIngestionService) {
-        this.repoIngestionService = repoIngestionService;
-    }
+  public RepoController(RepoIngestionService repoIngestionService) {
+    this.repoIngestionService = repoIngestionService;
+  }
 
-    @PostMapping("/ingest")
-    public ResponseEntity<String> ingest(@RequestBody RepoIngestRequest request) {
+  @PostMapping("/ingest")
+  public ResponseEntity<String> ingest(@RequestBody RepoIngestRequest request) {
 
-        repoIngestionService.ingest(request.getGitUrl());
+    repoIngestionService.ingest(request.getGitUrl());
 
-        return ResponseEntity.ok("Repo ingestion triggered");
-    }
+    return ResponseEntity.ok("Repo ingestion triggered");
+  }
 }
