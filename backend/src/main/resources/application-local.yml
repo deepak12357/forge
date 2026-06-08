@@ -35,3 +35,14 @@ logging:
   level:
     org.flywaydb: INFO
     org.springframework.boot.autoconfigure.flyway: DEBUG
+
+# Springdoc OpenAPI explicit config (helps when default paths are unclear)
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+
+# logging:
+#   level:
+#     org.springdoc: DEBUG
