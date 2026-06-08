@@ -149,6 +149,7 @@
                 <configuration>
                     <java>
                         <googleJavaFormat/>
+                        <removeUnusedImports/>
                     </java>
                 </configuration>
 
@@ -158,6 +159,25 @@
                             <goal>check</goal>
                         </goals>
                         <phase>verify</phase>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>com.mathieucarbou.mojo</groupId>
+                <artifactId>githook-maven-plugin</artifactId>
+                <version>2.3.0</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>install</goal>
+                        </goals>
+                        <phase>initialize</phase>
+                        <configuration>
+                            <hooks>
+                                <!-- Maps your local hooks/pre-commit file to the internal .git/hooks directory -->
+                                <pre-commit>hooks/pre-commit</pre-commit>
+                            </hooks>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>
