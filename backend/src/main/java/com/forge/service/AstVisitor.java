@@ -1,20 +1,18 @@
 package com.forge.service;
 
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
-import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.visitor.VoidVisitorAdapter;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.Getter;
 
 /**
- * AST Visitor for extracting class and method metadata from a parsed Java file.
- * Traverses the AST and collects structured information about classes and methods.
+ * AST Visitor for extracting class and method metadata from a parsed Java file. Traverses the AST
+ * and collects structured information about classes and methods.
  */
 public class AstVisitor extends VoidVisitorAdapter<Void> {
 
-  @Getter
-  private final List<ClassMetadata> classes = new ArrayList<>();
+  @Getter private final List<ClassMetadata> classes = new ArrayList<>();
 
   @Override
   public void visit(ClassOrInterfaceDeclaration classDecl, Void arg) {
@@ -25,35 +23,40 @@ public class AstVisitor extends VoidVisitorAdapter<Void> {
     classMetadata.setEndLine(classDecl.getEnd().map(pos -> pos.line).orElse(null));
 
     // Capture modifiers (public, private, abstract, final, etc.)
-    String modifiers = classDecl.getModifiers().isEmpty()
-        ? "package-private"
-        : classDecl.getModifiers().stream()
-            .map(Object::toString)
-            .reduce((a, b) -> a + " " + b)
-            .orElse("package-private");
+    String modifiers =
+        classDecl.getModifiers().isEmpty()
+            ? "package-private"
+            : classDecl.getModifiers().stream()
+                .map(Object::toString)
+                .reduce((a, b) -> a + " " + b)
+                .orElse("package-private");
     classMetadata.setModifiers(modifiers);
 
     // Extract method metadata from this class
     List<MethodMetadata> methods = new ArrayList<>();
-    classDecl.getMethods().forEach(methodDecl -> {
-      MethodMetadata methodMetadata = new MethodMetadata();
-      methodMetadata.setMethodName(methodDecl.getNameAsString());
-      methodMetadata.setSignature(methodDecl.getDeclarationAsString());
-      methodMetadata.setReturnType(methodDecl.getTypeAsString());
-      methodMetadata.setStartLine(methodDecl.getBegin().map(pos -> pos.line).orElse(null));
-      methodMetadata.setEndLine(methodDecl.getEnd().map(pos -> pos.line).orElse(null));
+    classDecl
+        .getMethods()
+        .forEach(
+            methodDecl -> {
+              MethodMetadata methodMetadata = new MethodMetadata();
+              methodMetadata.setMethodName(methodDecl.getNameAsString());
+              methodMetadata.setSignature(methodDecl.getDeclarationAsString());
+              methodMetadata.setReturnType(methodDecl.getTypeAsString());
+              methodMetadata.setStartLine(methodDecl.getBegin().map(pos -> pos.line).orElse(null));
+              methodMetadata.setEndLine(methodDecl.getEnd().map(pos -> pos.line).orElse(null));
 
-      // Capture method modifiers
-      String methodModifiers = methodDecl.getModifiers().isEmpty()
-          ? "package-private"
-          : methodDecl.getModifiers().stream()
-              .map(Object::toString)
-              .reduce((a, b) -> a + " " + b)
-              .orElse("package-private");
-      methodMetadata.setModifiers(methodModifiers);
+              // Capture method modifiers
+              String methodModifiers =
+                  methodDecl.getModifiers().isEmpty()
+                      ? "package-private"
+                      : methodDecl.getModifiers().stream()
+                          .map(Object::toString)
+                          .reduce((a, b) -> a + " " + b)
+                          .orElse("package-private");
+              methodMetadata.setModifiers(methodModifiers);
 
-      methods.add(methodMetadata);
-    });
+              methods.add(methodMetadata);
+            });
     classMetadata.setMethods(methods);
 
     classes.add(classMetadata);
@@ -62,9 +65,7 @@ public class AstVisitor extends VoidVisitorAdapter<Void> {
     super.visit(classDecl, arg);
   }
 
-  /**
-   * Data class for class metadata extracted from AST.
-   */
+  /** Data class for class metadata extracted from AST. */
   @Getter
   public static class ClassMetadata {
     private String className;
@@ -94,9 +95,7 @@ public class AstVisitor extends VoidVisitorAdapter<Void> {
     }
   }
 
-  /**
-   * Data class for method metadata extracted from AST.
-   */
+  /** Data class for method metadata extracted from AST. */
   @Getter
   public static class MethodMetadata {
     private String methodName;

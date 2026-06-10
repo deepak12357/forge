@@ -149,8 +149,13 @@ public class RepoIngestionService {
       repo.setUpdatedAt(OffsetDateTime.now());
       repoRepository.save(repo);
 
-      System.out.println("Repo parsing completed. Classes: " + classCount.get() + ", Methods: "
-          + methodCount.get() + ", Parse failures: " + parseFailureCount.get());
+      System.out.println(
+          "Repo parsing completed. Classes: "
+              + classCount.get()
+              + ", Methods: "
+              + methodCount.get()
+              + ", Parse failures: "
+              + parseFailureCount.get());
       System.out.println("Saved repo with id: " + repo.getId());
 
     } catch (Exception e) {
