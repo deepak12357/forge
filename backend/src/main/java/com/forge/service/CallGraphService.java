@@ -77,6 +77,7 @@ public class CallGraphService {
          String key = classFqn + "#" + m.getMethodName() + "#" + paramTypes;
          methodMap.put(key, m);
        }
+       log.debug("Loaded {} methods into call-graph lookup map", methodMap.size());
 
       // Track created edges to avoid duplicates
       Set<String> created = new HashSet<>();
@@ -98,18 +99,35 @@ public class CallGraphService {
 
             if (classFqn == null) return;
 
-            String callerKey = classFqn + "#" + md.getNameAsString();
-            MethodNodeEntity caller = methodMap.get(callerKey);
-            if (caller == null) {
-              // caller may be anonymous or not persisted; skip
-              return;
+            // Extract caller method's parameter types
+            String callerParamTypes = md.getParameters().isEmpty()
+                ? ""
+                : md.getParameters().stream()
+                    .map(p -> p.getTypeAsString())
+                    .collect(java.util.stream.Collectors.joining(","));
+            
+            String callerKey = classFqn + "#" + md.getNameAsString() + "#" + callerParamTypes;
+            MethodNodeEntity callerTemp = methodMap.get(callerKey);
+            if (callerTemp == null) {
+              // caller may be anonymous or not persisted; try without param types (fallback)
+              callerTemp = methodMap.values().stream()
+                  .filter(m -> m.getClassNode().getFullyQualifiedName().equals(classFqn)
+                      && m.getMethodName().equals(md.getNameAsString()))
+                  .findFirst()
+                  .orElse(null);
+              
+              if (callerTemp == null) {
+                // caller not found; skip
+                return;
+              }
             }
+            final MethodNodeEntity caller = callerTemp;
 
             md.findAll(MethodCallExpr.class).forEach(call -> {
               try {
                 ResolvedMethodDeclaration resolved = call.resolve();
-                String declClass = resolved.declaringType().getQualifiedName();
-                String declName = resolved.getName();
+                final String declClass = resolved.declaringType().getQualifiedName();
+                final String declName = resolved.getName();
                 
                 // Extract parameter types from the resolved method for precise overload matching
                 String paramTypes = resolved.getNumberOfParams() == 0
@@ -118,9 +136,21 @@ public class CallGraphService {
                         .mapToObj(i -> resolved.getParam(i).describeType())
                         .collect(java.util.stream.Collectors.joining(","));
                 
+                // Try exact match first
                 String calleeKey = declClass + "#" + declName + "#" + paramTypes;
-
-                MethodNodeEntity callee = methodMap.get(calleeKey);
+                MethodNodeEntity calleeFound = methodMap.get(calleeKey);
+                
+                // If no exact match, try without parameter types (allows for format mismatches)
+                if (calleeFound == null && !paramTypes.isEmpty()) {
+                  // Look for any method with same class and name (best effort)
+                  calleeFound = methodMap.values().stream()
+                      .filter(m -> m.getClassNode().getFullyQualifiedName().equals(declClass)
+                          && m.getMethodName().equals(declName))
+                      .findFirst()
+                      .orElse(null);
+                }
+                
+                final MethodNodeEntity callee = calleeFound;
                 if (callee != null) {
                   String edgeKey = caller.getId() + "->" + callee.getId() + ":CALL";
                   if (!created.contains(edgeKey)) {
@@ -136,19 +166,27 @@ public class CallGraphService {
                   resolvedCount.incrementAndGet();
                 } else {
                   unresolvedCount.incrementAndGet();
+                  if (log.isDebugEnabled()) {
+                    log.debug("Could not resolve call: {} (from {}.{})", calleeKey, classFqn, md.getNameAsString());
+                  }
                 }
               } catch (Exception e) {
                 // symbol resolution failed for this call
                 unresolvedCount.incrementAndGet();
+                if (log.isDebugEnabled()) {
+                  log.debug("Symbol resolution failed for call in {}.{}: {}", classFqn, md.getNameAsString(), e.getMessage());
+                }
               }
             });
           });
         } catch (Exception e) {
           log.warn("Failed to parse file for call graph: {}", f.getAbsolutePath(), e);
         }
-      }
+       }
 
-      log.info("Call graph built for repo {} — resolved: {}, unresolved: {}", repo.getId(), resolvedCount, unresolvedCount);
+       int totalCalls = resolvedCount.get() + unresolvedCount.get();
+       log.info("Call graph built for repo {} — analyzed {} files, found {} method calls: {} resolved, {} unresolved", 
+           repo.getId(), javaFiles.size(), totalCalls, resolvedCount.get(), unresolvedCount.get());
 
     } catch (Exception e) {
       log.error("Error building call graph for repo {}: {}", repo.getId(), e.getMessage(), e);
