@@ -72,4 +72,3 @@ The project also has a `spotless:check` goal that runs during the Maven `verify`
 ---
 
 **Summary**: After every change, before you commit, the hook will automatically format your code. No manual formatting required! ✨
-

@@ -48,4 +48,3 @@ echo "Git hooks setup complete!"
 echo "- Pre-commit hook will automatically run spotless:apply on staged changes"
 echo "- Formatted files will be automatically staged (git add -u)"
 echo ""
-
