@@ -59,6 +59,7 @@ public class CallGraphService {
       JavaSymbolSolver symbolSolver = new JavaSymbolSolver(combinedTypeSolver);
 
       ParserConfiguration config = new ParserConfiguration();
+      config.setLanguageLevel(ParserConfiguration.LanguageLevel.JAVA_17);
       config.setSymbolResolver(symbolSolver);
 
       StaticJavaParser.setConfiguration(config);
