@@ -18,23 +18,29 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.eclipse.jgit.api.Git;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 @Service
 public class RepoIngestionService {
+  private static final Logger log = LoggerFactory.getLogger(RepoIngestionService.class);
   private final RepoRepository repoRepository;
   private final ClassNodeRepository classNodeRepository;
   private final MethodNodeRepository methodNodeRepository;
+  private final CallGraphService callGraphService;
   private static final String BASE_DIR = "forge-workspace";
   private final JavaParser javaParser;
 
   public RepoIngestionService(
       RepoRepository repoRepository,
       ClassNodeRepository classNodeRepository,
-      MethodNodeRepository methodNodeRepository) {
+      MethodNodeRepository methodNodeRepository,
+      CallGraphService callGraphService) {
     this.repoRepository = repoRepository;
     this.classNodeRepository = classNodeRepository;
     this.methodNodeRepository = methodNodeRepository;
+    this.callGraphService = callGraphService;
 
     ParserConfiguration config =
         new ParserConfiguration().setLanguageLevel(ParserConfiguration.LanguageLevel.JAVA_17);
@@ -69,7 +75,7 @@ public class RepoIngestionService {
       repo.setUpdatedAt(OffsetDateTime.now());
       repoRepository.save(repo);
 
-      System.out.println("Repo cloned at: " + repoDir.getAbsolutePath());
+      log.info("Repo cloned at: {}", repoDir.getAbsolutePath());
 
       // STEP 4: update to PARSING status
       repo.setStatus("PARSING");
@@ -79,7 +85,7 @@ public class RepoIngestionService {
       // STEP 5: discover and parse java files
       List<File> javaFiles = findJavaFiles(repoDir);
 
-      System.out.println("Java files found: " + javaFiles.size());
+      log.info("Java files found: {}", javaFiles.size());
 
       // Track counts for this ingestion
       AtomicInteger classCount = new AtomicInteger(0);
@@ -125,23 +131,29 @@ public class RepoIngestionService {
                 methodNode.setStartLine(methodMetadata.getStartLine());
                 methodNode.setEndLine(methodMetadata.getEndLine());
                 methodNode.setModifiers(methodMetadata.getModifiers());
+                methodNode.setParameterTypes(methodMetadata.getParameterTypes());
 
                 methodNodeRepository.save(methodNode);
                 methodCount.incrementAndGet();
               }
             }
           } else {
-            System.out.println("FAILED FILE (unparseable): " + file.getName());
+            log.warn("FAILED FILE (unparseable): {}", file.getName());
             parseFailureCount.incrementAndGet();
           }
         } catch (Exception e) {
-          System.out.println("EXCEPTION PARSING FILE: " + file.getName());
-          e.printStackTrace();
+          log.error("EXCEPTION PARSING FILE: {}", file.getName(), e);
           parseFailureCount.incrementAndGet();
         }
       }
 
-      // STEP 6: update repository with counts and mark as PARSED
+      // STEP 6: build call graph (best-effort) and update repository with counts and mark as PARSED
+      try {
+        callGraphService.buildCallGraph(repoDir, repo);
+      } catch (Exception e) {
+        log.error("Call graph build failed: {}", e.getMessage(), e);
+      }
+
       repo.setClassCount(classCount.get());
       repo.setMethodCount(methodCount.get());
       repo.setParseFailureCount(parseFailureCount.get());
@@ -149,19 +161,14 @@ public class RepoIngestionService {
       repo.setUpdatedAt(OffsetDateTime.now());
       repoRepository.save(repo);
 
-      System.out.println(
-          "Repo parsing completed. Classes: "
-              + classCount.get()
-              + ", Methods: "
-              + methodCount.get()
-              + ", Parse failures: "
-              + parseFailureCount.get());
-      System.out.println("Saved repo with id: " + repo.getId());
-
+      log.info(
+          "Repo parsing completed. Classes: {}, Methods: {}, Parse failures: {}",
+          classCount.get(),
+          methodCount.get(),
+          parseFailureCount.get());
+      log.info("Saved repo with id: {}", repo.getId());
     } catch (Exception e) {
-      System.out.println("INGESTION FAILED: " + e.getMessage());
-      e.printStackTrace();
-
+      log.error("INGESTION FAILED: {}", e.getMessage(), e);
       repo.setStatus("FAILED_PARSE");
       repo.setUpdatedAt(OffsetDateTime.now());
       repoRepository.save(repo);
@@ -173,10 +180,9 @@ public class RepoIngestionService {
       if (repoDir != null && repoDir.exists()) {
         try {
           deleteDir(repoDir);
-          System.out.println("Cleaned up repo directory: " + repoDir.getAbsolutePath());
+          log.info("Cleaned up repo directory: {}", repoDir.getAbsolutePath());
         } catch (Exception e) {
-          System.err.println("Failed to cleanup repo directory: " + e.getMessage());
-          e.printStackTrace();
+          log.error("Failed to cleanup repo directory: {}", e.getMessage(), e);
         }
       }
     }

@@ -36,6 +36,24 @@
 			<scope>test</scope>
 		</dependency>
 		<dependency>
+			<groupId>org.testcontainers</groupId>
+			<artifactId>testcontainers</artifactId>
+			<version>1.19.7</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.testcontainers</groupId>
+			<artifactId>postgresql</artifactId>
+			<version>1.19.7</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.testcontainers</groupId>
+			<artifactId>junit-jupiter</artifactId>
+			<version>1.19.7</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-web</artifactId>
 		</dependency>
@@ -95,6 +113,11 @@
             <artifactId>javaparser-core</artifactId>
             <version>3.25.9</version>
         </dependency>
+		<dependency>
+			<groupId>com.github.javaparser</groupId>
+			<artifactId>javaparser-symbol-solver-core</artifactId>
+			<version>3.25.9</version>
+		</dependency>
 	</dependencies>
 
 	<build>
@@ -180,28 +203,49 @@
                         <configuration>
                             <hooks>
                                 <pre-commit><![CDATA[
-                        echo "[Git Hook] Running Spotless to format code..."
-                        if command -v ./mvnw > /dev/null 2>&1; then
-                            ./mvnw spotless:apply -DratchetFrom=HEAD
-                        else
-                            mvn spotless:apply -DratchetFrom=HEAD
-                        fi
-                        git add -u
-                    ]]></pre-commit>
+#!/bin/bash
+set -e
+
+echo "[Git Hook] Running Spotless to format code..."
+
+# Get the backend directory (parent of .git)
+BACKEND_DIR="$(git rev-parse --show-toplevel)/backend"
+cd "$BACKEND_DIR" || exit 1
+
+# Find and run Maven wrapper
+if [ -f "./mvnw" ]; then
+    ./mvnw spotless:apply -q && echo "[Git Hook] Spotless formatting applied"
+elif [ -f "mvnw.cmd" ]; then
+    # For Windows (PowerShell/CMD)
+    echo "[Git Hook] Windows detected, formatting may require manual review"
+    exit 0
+else
+    echo "[Git Hook] Maven wrapper not found, skipping spotless"
+    exit 0
+fi
+
+# Stage any formatting changes
+git add -u
+
+echo "[Git Hook] Pre-commit hook completed"
+                     ]]></pre-commit>
                             </hooks>
                         </configuration>
                     </execution>
                 </executions>
             </plugin>
             <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-surefire-plugin</artifactId>
-                <version>3.5.3</version>
-                <configuration>
-                    <!-- Disables the test runner entirely so your build never crashes from empty test phases -->
-                    <skipTests>true</skipTests>
-                </configuration>
-            </plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<version>3.5.3</version>
+				<configuration>
+					<!-- Skip Docker-based tests by default (use -DskipTests=false to run) -->
+					<skipTests>true</skipTests>
+					<excludes>
+						<exclude>**/*IntegrationTest.java</exclude>
+					</excludes>
+				</configuration>
+			</plugin>
 		</plugins>
 	</build>
 

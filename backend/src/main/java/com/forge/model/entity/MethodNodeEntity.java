@@ -35,4 +35,7 @@ public class MethodNodeEntity {
 
   @Column(name = "end_line")
   private Integer endLine;
+
+  @Column(name = "parameter_types", length = 2000)
+  private String parameterTypes;
 }
