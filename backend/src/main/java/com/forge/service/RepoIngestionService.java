@@ -161,11 +161,14 @@ public class RepoIngestionService {
       repo.setUpdatedAt(OffsetDateTime.now());
       repoRepository.save(repo);
 
-       log.info("Repo parsing completed. Classes: {}, Methods: {}, Parse failures: {}",
-           classCount.get(), methodCount.get(), parseFailureCount.get());
-       log.info("Saved repo with id: {}", repo.getId());
-     } catch (Exception e) {
-       log.error("INGESTION FAILED: {}", e.getMessage(), e);
+      log.info(
+          "Repo parsing completed. Classes: {}, Methods: {}, Parse failures: {}",
+          classCount.get(),
+          methodCount.get(),
+          parseFailureCount.get());
+      log.info("Saved repo with id: {}", repo.getId());
+    } catch (Exception e) {
+      log.error("INGESTION FAILED: {}", e.getMessage(), e);
       repo.setStatus("FAILED_PARSE");
       repo.setUpdatedAt(OffsetDateTime.now());
       repoRepository.save(repo);
