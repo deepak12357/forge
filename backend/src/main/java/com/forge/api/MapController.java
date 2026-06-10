@@ -70,80 +70,10 @@ public class MapController {
       return new EdgeDto(e.getId(), fromId, toId, e.getType(), e.getMetadata());
     }).collect(Collectors.toList());
 
-    MapResponse resp = new MapResponse(classDtos, methodDtos, edgeDtos);
+     MapResponse resp = new MapResponse(classDtos, methodDtos, edgeDtos);
 
-    return ResponseEntity.ok(resp);
-  }
-
-  // DTOs
-  public static class MapResponse {
-    public List<ClassDto> classes;
-    public List<MethodDto> methods;
-    public List<EdgeDto> edges;
-
-    public MapResponse(List<ClassDto> classes, List<MethodDto> methods, List<EdgeDto> edges) {
-      this.classes = classes;
-      this.methods = methods;
-      this.edges = edges;
-    }
-  }
-
-  public static class ClassDto {
-    public Long id;
-    public String packageName;
-    public String className;
-    public String fullyQualifiedName;
-    public String filePath;
-    public Integer startLine;
-    public Integer endLine;
-
-    public ClassDto(Long id, String packageName, String className, String fullyQualifiedName, String filePath, Integer startLine, Integer endLine) {
-      this.id = id;
-      this.packageName = packageName;
-      this.className = className;
-      this.fullyQualifiedName = fullyQualifiedName;
-      this.filePath = filePath;
-      this.startLine = startLine;
-      this.endLine = endLine;
-    }
-  }
-
-  public static class MethodDto {
-    public Long id;
-    public Long classId;
-    public String methodName;
-    public String signature;
-    public String returnType;
-    public String modifiers;
-    public Integer startLine;
-    public Integer endLine;
-
-    public MethodDto(Long id, Long classId, String methodName, String signature, String returnType, String modifiers, Integer startLine, Integer endLine) {
-      this.id = id;
-      this.classId = classId;
-      this.methodName = methodName;
-      this.signature = signature;
-      this.returnType = returnType;
-      this.modifiers = modifiers;
-      this.startLine = startLine;
-      this.endLine = endLine;
-    }
-  }
-
-  public static class EdgeDto {
-    public Long id;
-    public Long fromMethodId;
-    public Long toMethodId;
-    public String type;
-    public String metadata;
-
-    public EdgeDto(Long id, Long fromMethodId, Long toMethodId, String type, String metadata) {
-      this.id = id;
-      this.fromMethodId = fromMethodId;
-      this.toMethodId = toMethodId;
-      this.type = type;
-      this.metadata = metadata;
-    }
-  }
+     return ResponseEntity.ok(resp);
+   }
 }
+
 

@@ -63,19 +63,19 @@ public class CallGraphService {
 
       StaticJavaParser.setConfiguration(config);
 
-      // Load persisted classes & methods for this repo into maps to avoid DB lookups per edge
-      List<ClassNodeEntity> classes = classNodeRepository.findByRepoId(repo.getId());
-      List<MethodNodeEntity> methods = methodNodeRepository.findByClassNodeIn(classes);
+       // Load persisted classes & methods for this repo into maps to avoid DB lookups per edge
+       List<ClassNodeEntity> classes = classNodeRepository.findByRepoId(repo.getId());
+       List<MethodNodeEntity> methods = methodNodeRepository.findByClassNodeIn(classes);
 
-      // Key: fullyQualifiedClassName#methodName  -> MethodNodeEntity
-      Map<String, MethodNodeEntity> methodMap = new HashMap<>();
-      for (MethodNodeEntity m : methods) {
-        String classFqn = m.getClassNode().getFullyQualifiedName();
-        String key = classFqn + "#" + m.getMethodName();
-        if (!methodMap.containsKey(key)) {
-          methodMap.put(key, m);
-        }
-      }
+       // Key: fullyQualifiedClassName#methodName#parameterTypes -> MethodNodeEntity
+       // This allows precise matching of overloaded methods
+       Map<String, MethodNodeEntity> methodMap = new HashMap<>();
+       for (MethodNodeEntity m : methods) {
+         String classFqn = m.getClassNode().getFullyQualifiedName();
+         String paramTypes = m.getParameterTypes() != null ? m.getParameterTypes() : "";
+         String key = classFqn + "#" + m.getMethodName() + "#" + paramTypes;
+         methodMap.put(key, m);
+       }
 
       // Track created edges to avoid duplicates
       Set<String> created = new HashSet<>();
@@ -109,7 +109,15 @@ public class CallGraphService {
                 ResolvedMethodDeclaration resolved = call.resolve();
                 String declClass = resolved.declaringType().getQualifiedName();
                 String declName = resolved.getName();
-                String calleeKey = declClass + "#" + declName;
+                
+                // Extract parameter types from the resolved method for precise overload matching
+                String paramTypes = resolved.getNumberOfParams() == 0
+                    ? ""
+                    : java.util.stream.IntStream.range(0, resolved.getNumberOfParams())
+                        .mapToObj(i -> resolved.getParam(i).describeType())
+                        .collect(java.util.stream.Collectors.joining(","));
+                
+                String calleeKey = declClass + "#" + declName + "#" + paramTypes;
 
                 MethodNodeEntity callee = methodMap.get(calleeKey);
                 if (callee != null) {
