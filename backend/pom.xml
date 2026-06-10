@@ -203,14 +203,32 @@
                         <configuration>
                             <hooks>
                                 <pre-commit><![CDATA[
-                        echo "[Git Hook] Running Spotless to format code..."
-                        if command -v ./mvnw > /dev/null 2>&1; then
-                            ./mvnw spotless:apply -DratchetFrom=HEAD
-                        else
-                            mvn spotless:apply -DratchetFrom=HEAD
-                        fi
-                        git add -u
-                    ]]></pre-commit>
+#!/bin/bash
+set -e
+
+echo "[Git Hook] Running Spotless to format code..."
+
+# Get the backend directory (parent of .git)
+BACKEND_DIR="$(git rev-parse --show-toplevel)/backend"
+cd "$BACKEND_DIR" || exit 1
+
+# Find and run Maven wrapper
+if [ -f "./mvnw" ]; then
+    ./mvnw spotless:apply -q && echo "[Git Hook] Spotless formatting applied"
+elif [ -f "mvnw.cmd" ]; then
+    # For Windows (PowerShell/CMD)
+    echo "[Git Hook] Windows detected, formatting may require manual review"
+    exit 0
+else
+    echo "[Git Hook] Maven wrapper not found, skipping spotless"
+    exit 0
+fi
+
+# Stage any formatting changes
+git add -u
+
+echo "[Git Hook] Pre-commit hook completed"
+                     ]]></pre-commit>
                             </hooks>
                         </configuration>
                     </execution>

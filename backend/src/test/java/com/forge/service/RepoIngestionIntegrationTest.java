@@ -4,13 +4,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.forge.api.MapController;
 import com.forge.model.dto.MapResponse;
-import com.forge.repo.EdgeRepository;
+import com.forge.model.entity.RepoEntity;
 import com.forge.repo.ClassNodeRepository;
+import com.forge.repo.EdgeRepository;
 import com.forge.repo.MethodNodeRepository;
 import com.forge.repo.RepoRepository;
-import com.forge.model.entity.RepoEntity;
 import java.io.File;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.OffsetDateTime;
@@ -26,9 +25,9 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 /**
  * Integration tests for the FORGE ingest and call-graph pipeline using Testcontainers.
- * 
- * Note: This test requires Docker to be running. If Docker is not available, the test
- * can be run with `-DskipTests` or by ensuring Docker Desktop is running.
+ *
+ * <p>Note: This test requires Docker to be running. If Docker is not available, the test can be run
+ * with `-DskipTests` or by ensuring Docker Desktop is running.
  */
 @SpringBootTest
 @Testcontainers
@@ -76,7 +75,7 @@ class RepoIngestionIntegrationTest {
     Path fixtureRepoPath = Paths.get("src/test/resources/fixture-repo");
     File fixtureDir = fixtureRepoPath.toFile();
     assertThat(fixtureDir.exists()).isTrue();
-    
+
     try {
       // Since we can't use ingest() which does git cloning, we'll parse directly
       // This is sufficient for testing the parsing and call-graph building logic
@@ -85,7 +84,7 @@ class RepoIngestionIntegrationTest {
       // Reload from DB to verify persisted state
       repo = repoRepository.findById(repo.getId()).orElse(null);
       assertThat(repo).isNotNull();
-      
+
       // Even if git clone fails, we can verify the classes/methods parsing worked
       // when the repo was last successfully ingested
       System.out.println(
@@ -111,15 +110,12 @@ class RepoIngestionIntegrationTest {
     } catch (Exception e) {
       // Git clone expected to fail since file:// is not a valid git URL
       // but we can still verify the infrastructure works
-      System.out.println("Note: Git clone failed as expected (not a real git repo): " + e.getMessage());
-      
+      System.out.println(
+          "Note: Git clone failed as expected (not a real git repo): " + e.getMessage());
+
       // Verify we can still access the repo and map endpoint
       ResponseEntity<MapResponse> mapResponse = mapController.getMap(repo.getId());
       assertThat(mapResponse.getStatusCode().is2xxSuccessful()).isTrue();
     }
   }
 }
-
-
-
-

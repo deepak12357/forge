@@ -1,7 +1,7 @@
 package com.forge.repo;
 
-import com.forge.model.entity.MethodNodeEntity;
 import com.forge.model.entity.ClassNodeEntity;
+import com.forge.model.entity.MethodNodeEntity;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 

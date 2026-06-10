@@ -45,23 +45,25 @@ public class AstVisitor extends VoidVisitorAdapter<Void> {
               methodMetadata.setStartLine(methodDecl.getBegin().map(pos -> pos.line).orElse(null));
               methodMetadata.setEndLine(methodDecl.getEnd().map(pos -> pos.line).orElse(null));
 
-      // Capture parameter types: comma-separated list of type names
-      String paramTypes = methodDecl.getParameters().isEmpty()
-          ? ""
-          : methodDecl.getParameters().stream()
-              .map(p -> p.getTypeAsString())
-              .reduce((a, b) -> a + "," + b)
-              .orElse("");
-      methodMetadata.setParameterTypes(paramTypes);
+              // Capture parameter types: comma-separated list of type names
+              String paramTypes =
+                  methodDecl.getParameters().isEmpty()
+                      ? ""
+                      : methodDecl.getParameters().stream()
+                          .map(p -> p.getTypeAsString())
+                          .reduce((a, b) -> a + "," + b)
+                          .orElse("");
+              methodMetadata.setParameterTypes(paramTypes);
 
-      // Capture method modifiers
-      String methodModifiers = methodDecl.getModifiers().isEmpty()
-          ? "package-private"
-          : methodDecl.getModifiers().stream()
-              .map(Object::toString)
-              .reduce((a, b) -> a + " " + b)
-              .orElse("package-private");
-      methodMetadata.setModifiers(methodModifiers);
+              // Capture method modifiers
+              String methodModifiers =
+                  methodDecl.getModifiers().isEmpty()
+                      ? "package-private"
+                      : methodDecl.getModifiers().stream()
+                          .map(Object::toString)
+                          .reduce((a, b) -> a + " " + b)
+                          .orElse("package-private");
+              methodMetadata.setModifiers(methodModifiers);
 
               methods.add(methodMetadata);
             });

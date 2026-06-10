@@ -7,4 +7,3 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface EdgeRepository extends JpaRepository<EdgeEntity, Long> {
   List<EdgeEntity> findByRepoId(Long repoId);
 }
-

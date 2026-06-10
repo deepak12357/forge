@@ -18,10 +18,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.eclipse.jgit.api.Git;
-import org.springframework.stereotype.Service;
-import com.forge.service.CallGraphService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
 
 @Service
 public class RepoIngestionService {
@@ -83,12 +82,12 @@ public class RepoIngestionService {
       repo.setUpdatedAt(OffsetDateTime.now());
       repoRepository.save(repo);
 
-       // STEP 5: discover and parse java files
-       List<File> javaFiles = findJavaFiles(repoDir);
+      // STEP 5: discover and parse java files
+      List<File> javaFiles = findJavaFiles(repoDir);
 
-       log.info("Java files found: {}", javaFiles.size());
+      log.info("Java files found: {}", javaFiles.size());
 
-       // Track counts for this ingestion
+      // Track counts for this ingestion
       AtomicInteger classCount = new AtomicInteger(0);
       AtomicInteger methodCount = new AtomicInteger(0);
       AtomicInteger parseFailureCount = new AtomicInteger(0);
@@ -122,68 +121,67 @@ public class RepoIngestionService {
               ClassNodeEntity savedClass = classNodeRepository.save(classNode);
               classCount.incrementAndGet();
 
-               // Persist methods for this class
-               for (MethodMetadata methodMetadata : classMetadata.getMethods()) {
-                 MethodNodeEntity methodNode = new MethodNodeEntity();
-                 methodNode.setClassNode(savedClass);
-                 methodNode.setMethodName(methodMetadata.getMethodName());
-                 methodNode.setSignature(methodMetadata.getSignature());
-                 methodNode.setReturnType(methodMetadata.getReturnType());
-                 methodNode.setStartLine(methodMetadata.getStartLine());
-                 methodNode.setEndLine(methodMetadata.getEndLine());
-                 methodNode.setModifiers(methodMetadata.getModifiers());
-                 methodNode.setParameterTypes(methodMetadata.getParameterTypes());
+              // Persist methods for this class
+              for (MethodMetadata methodMetadata : classMetadata.getMethods()) {
+                MethodNodeEntity methodNode = new MethodNodeEntity();
+                methodNode.setClassNode(savedClass);
+                methodNode.setMethodName(methodMetadata.getMethodName());
+                methodNode.setSignature(methodMetadata.getSignature());
+                methodNode.setReturnType(methodMetadata.getReturnType());
+                methodNode.setStartLine(methodMetadata.getStartLine());
+                methodNode.setEndLine(methodMetadata.getEndLine());
+                methodNode.setModifiers(methodMetadata.getModifiers());
+                methodNode.setParameterTypes(methodMetadata.getParameterTypes());
 
-                 methodNodeRepository.save(methodNode);
+                methodNodeRepository.save(methodNode);
                 methodCount.incrementAndGet();
               }
             }
-           } else {
-             log.warn("FAILED FILE (unparseable): {}", file.getName());
-             parseFailureCount.incrementAndGet();
-           }
-         } catch (Exception e) {
-           log.error("EXCEPTION PARSING FILE: {}", file.getName(), e);
+          } else {
+            log.warn("FAILED FILE (unparseable): {}", file.getName());
+            parseFailureCount.incrementAndGet();
+          }
+        } catch (Exception e) {
+          log.error("EXCEPTION PARSING FILE: {}", file.getName(), e);
           parseFailureCount.incrementAndGet();
         }
       }
 
-       // STEP 6: build call graph (best-effort) and update repository with counts and mark as PARSED
-       try {
-         callGraphService.buildCallGraph(repoDir, repo);
-       } catch (Exception e) {
-         log.error("Call graph build failed: {}", e.getMessage(), e);
-       }
+      // STEP 6: build call graph (best-effort) and update repository with counts and mark as PARSED
+      try {
+        callGraphService.buildCallGraph(repoDir, repo);
+      } catch (Exception e) {
+        log.error("Call graph build failed: {}", e.getMessage(), e);
+      }
 
-       repo.setClassCount(classCount.get());
-       repo.setMethodCount(methodCount.get());
-       repo.setParseFailureCount(parseFailureCount.get());
-       repo.setStatus("PARSED");
-       repo.setUpdatedAt(OffsetDateTime.now());
-       repoRepository.save(repo);
+      repo.setClassCount(classCount.get());
+      repo.setMethodCount(methodCount.get());
+      repo.setParseFailureCount(parseFailureCount.get());
+      repo.setStatus("PARSED");
+      repo.setUpdatedAt(OffsetDateTime.now());
+      repoRepository.save(repo);
 
-       log.info("Repo parsing completed. Classes: {}, Methods: {}, Parse failures: {}", 
+       log.info("Repo parsing completed. Classes: {}, Methods: {}, Parse failures: {}",
            classCount.get(), methodCount.get(), parseFailureCount.get());
        log.info("Saved repo with id: {}", repo.getId());
      } catch (Exception e) {
        log.error("INGESTION FAILED: {}", e.getMessage(), e);
+      repo.setStatus("FAILED_PARSE");
+      repo.setUpdatedAt(OffsetDateTime.now());
+      repoRepository.save(repo);
 
-       repo.setStatus("FAILED_PARSE");
-       repo.setUpdatedAt(OffsetDateTime.now());
-       repoRepository.save(repo);
-
-       throw new RuntimeException("Failed to ingest repository: " + gitUrl, e);
+      throw new RuntimeException("Failed to ingest repository: " + gitUrl, e);
 
     } finally {
       // STEP 7: cleanup cloned repository
-       if (repoDir != null && repoDir.exists()) {
-         try {
-           deleteDir(repoDir);
-           log.info("Cleaned up repo directory: {}", repoDir.getAbsolutePath());
-         } catch (Exception e) {
-           log.error("Failed to cleanup repo directory: {}", e.getMessage(), e);
-         }
-       }
+      if (repoDir != null && repoDir.exists()) {
+        try {
+          deleteDir(repoDir);
+          log.info("Cleaned up repo directory: {}", repoDir.getAbsolutePath());
+        } catch (Exception e) {
+          log.error("Failed to cleanup repo directory: {}", e.getMessage(), e);
+        }
+      }
     }
   }
 

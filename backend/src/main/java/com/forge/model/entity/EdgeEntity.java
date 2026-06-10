@@ -32,4 +32,3 @@ public class EdgeEntity {
   @Column(name = "metadata", columnDefinition = "text")
   private String metadata;
 }
-

@@ -1,9 +1,9 @@
 package com.forge.model.dto;
 
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import java.util.List;
 
 /** DTOs for the map API response. Uses Lombok to reduce boilerplate. */
 @Data
@@ -52,4 +52,3 @@ public class MapResponse {
     private String metadata;
   }
 }
-
