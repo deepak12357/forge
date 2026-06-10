@@ -6,15 +6,17 @@ import com.forge.model.entity.RepoEntity;
 import com.forge.repo.ClassNodeRepository;
 import com.forge.repo.MethodNodeRepository;
 import com.forge.repo.RepoRepository;
+import com.forge.service.AstVisitor.ClassMetadata;
+import com.forge.service.AstVisitor.MethodMetadata;
 import com.github.javaparser.JavaParser;
 import com.github.javaparser.ParseResult;
 import com.github.javaparser.ParserConfiguration;
 import com.github.javaparser.ast.CompilationUnit;
-import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import java.io.File;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.eclipse.jgit.api.Git;
 import org.springframework.stereotype.Service;
 
@@ -57,8 +59,11 @@ public class RepoIngestionService {
     // STEP 2: save to DB
     repoRepository.save(repo);
 
+    File repoDir = null;
+
     try {
-      File repoDir = cloneRepository(gitUrl, repo.getId());
+      // STEP 3: clone repository
+      repoDir = cloneRepository(gitUrl, repo.getId());
 
       repo.setStatus("CLONED");
       repo.setUpdatedAt(OffsetDateTime.now());
@@ -66,20 +71,115 @@ public class RepoIngestionService {
 
       System.out.println("Repo cloned at: " + repoDir.getAbsolutePath());
 
-      // STEP 3: discover java files
+      // STEP 4: update to PARSING status
+      repo.setStatus("PARSING");
+      repo.setUpdatedAt(OffsetDateTime.now());
+      repoRepository.save(repo);
+
+      // STEP 5: discover and parse java files
       List<File> javaFiles = findJavaFiles(repoDir);
 
       System.out.println("Java files found: " + javaFiles.size());
-      for (File file : javaFiles) {
-        parseAndSave(file, repo);
-      }
-    } catch (Exception e) {
-      repo.setStatus("FAILED_CLONE");
-      repoRepository.save(repo);
-      throw new RuntimeException(e);
-    }
 
-    System.out.println("Saved repo with id: " + repo.getId());
+      // Track counts for this ingestion
+      AtomicInteger classCount = new AtomicInteger(0);
+      AtomicInteger methodCount = new AtomicInteger(0);
+      AtomicInteger parseFailureCount = new AtomicInteger(0);
+
+      for (File file : javaFiles) {
+        try {
+          ParseResult<CompilationUnit> parseResult = javaParser.parse(file);
+          if (parseResult.isSuccessful()) {
+            CompilationUnit cu = parseResult.getResult().get();
+            String packageName =
+                cu.getPackageDeclaration().map(pd -> pd.getName().toString()).orElse(null);
+
+            // Use visitor to extract metadata
+            AstVisitor visitor = new AstVisitor();
+            visitor.visit(cu, null);
+
+            // Persist classes and methods
+            for (ClassMetadata classMetadata : visitor.getClasses()) {
+              ClassNodeEntity classNode = new ClassNodeEntity();
+              classNode.setRepo(repo);
+              classNode.setPackageName(packageName);
+              classNode.setClassName(classMetadata.getClassName());
+              classNode.setFullyQualifiedName(
+                  packageName == null
+                      ? classMetadata.getClassName()
+                      : packageName + "." + classMetadata.getClassName());
+              classNode.setFilePath(file.getAbsolutePath());
+              classNode.setStartLine(classMetadata.getStartLine());
+              classNode.setEndLine(classMetadata.getEndLine());
+
+              ClassNodeEntity savedClass = classNodeRepository.save(classNode);
+              classCount.incrementAndGet();
+
+              // Persist methods for this class
+              for (MethodMetadata methodMetadata : classMetadata.getMethods()) {
+                MethodNodeEntity methodNode = new MethodNodeEntity();
+                methodNode.setClassNode(savedClass);
+                methodNode.setMethodName(methodMetadata.getMethodName());
+                methodNode.setSignature(methodMetadata.getSignature());
+                methodNode.setReturnType(methodMetadata.getReturnType());
+                methodNode.setStartLine(methodMetadata.getStartLine());
+                methodNode.setEndLine(methodMetadata.getEndLine());
+                methodNode.setModifiers(methodMetadata.getModifiers());
+
+                methodNodeRepository.save(methodNode);
+                methodCount.incrementAndGet();
+              }
+            }
+          } else {
+            System.out.println("FAILED FILE (unparseable): " + file.getName());
+            parseFailureCount.incrementAndGet();
+          }
+        } catch (Exception e) {
+          System.out.println("EXCEPTION PARSING FILE: " + file.getName());
+          e.printStackTrace();
+          parseFailureCount.incrementAndGet();
+        }
+      }
+
+      // STEP 6: update repository with counts and mark as PARSED
+      repo.setClassCount(classCount.get());
+      repo.setMethodCount(methodCount.get());
+      repo.setParseFailureCount(parseFailureCount.get());
+      repo.setStatus("PARSED");
+      repo.setUpdatedAt(OffsetDateTime.now());
+      repoRepository.save(repo);
+
+      System.out.println(
+          "Repo parsing completed. Classes: "
+              + classCount.get()
+              + ", Methods: "
+              + methodCount.get()
+              + ", Parse failures: "
+              + parseFailureCount.get());
+      System.out.println("Saved repo with id: " + repo.getId());
+
+    } catch (Exception e) {
+      System.out.println("INGESTION FAILED: " + e.getMessage());
+      e.printStackTrace();
+
+      repo.setStatus("FAILED_PARSE");
+      repo.setUpdatedAt(OffsetDateTime.now());
+      repoRepository.save(repo);
+
+      throw new RuntimeException("Failed to ingest repository: " + gitUrl, e);
+
+    } finally {
+      // STEP 7: cleanup cloned repository
+      if (repoDir != null && repoDir.exists()) {
+        try {
+          deleteDir(repoDir);
+          System.out.println("Cleaned up repo directory: " + repoDir.getAbsolutePath());
+        } catch (Exception e) {
+          System.err.println("Failed to cleanup repo directory: " + e.getMessage());
+          e.printStackTrace();
+        }
+      }
+    }
   }
 
   private void ensureWorkspaceExists() {
@@ -142,57 +242,6 @@ public class RepoIngestionService {
       if (file.getName().endsWith(".java")) {
         javaFiles.add(file);
       }
-    }
-  }
-
-  private void parseAndSave(File file, RepoEntity repo) {
-    try {
-      ParseResult<CompilationUnit> result = javaParser.parse(file);
-
-      if (result.getResult().isEmpty()) {
-        System.out.println("FAILED FILE (unparseable): " + file.getName());
-        return;
-      }
-
-      CompilationUnit cu = result.getResult().get();
-
-      String packageName =
-          cu.getPackageDeclaration().map(pd -> pd.getName().toString()).orElse(null);
-
-      cu.findAll(ClassOrInterfaceDeclaration.class)
-          .forEach(
-              cls -> {
-
-                // CREATE CLASS ENTITY
-                ClassNodeEntity classNode = new ClassNodeEntity();
-                classNode.setRepo(repo);
-                classNode.setPackageName(packageName);
-                classNode.setClassName(cls.getNameAsString());
-                classNode.setFullyQualifiedName(
-                    packageName == null
-                        ? cls.getNameAsString()
-                        : packageName + "." + cls.getNameAsString());
-                classNode.setFilePath(file.getAbsolutePath());
-
-                ClassNodeEntity savedClass = classNodeRepository.save(classNode);
-
-                // METHODS
-                cls.getMethods()
-                    .forEach(
-                        method -> {
-                          MethodNodeEntity methodNode = new MethodNodeEntity();
-                          methodNode.setClassNode(savedClass);
-                          methodNode.setMethodName(method.getNameAsString());
-                          methodNode.setSignature(method.getDeclarationAsString());
-                          methodNode.setReturnType(method.getTypeAsString());
-
-                          methodNodeRepository.save(methodNode);
-                        });
-              });
-
-    } catch (Exception e) {
-      System.out.println("FAILED FILE: " + file.getName());
-      e.printStackTrace();
     }
   }
 }
