@@ -19,22 +19,26 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.eclipse.jgit.api.Git;
 import org.springframework.stereotype.Service;
+import com.forge.service.CallGraphService;
 
 @Service
 public class RepoIngestionService {
   private final RepoRepository repoRepository;
   private final ClassNodeRepository classNodeRepository;
   private final MethodNodeRepository methodNodeRepository;
+  private final CallGraphService callGraphService;
   private static final String BASE_DIR = "forge-workspace";
   private final JavaParser javaParser;
 
   public RepoIngestionService(
       RepoRepository repoRepository,
       ClassNodeRepository classNodeRepository,
-      MethodNodeRepository methodNodeRepository) {
+      MethodNodeRepository methodNodeRepository,
+      CallGraphService callGraphService) {
     this.repoRepository = repoRepository;
     this.classNodeRepository = classNodeRepository;
     this.methodNodeRepository = methodNodeRepository;
+    this.callGraphService = callGraphService;
 
     ParserConfiguration config =
         new ParserConfiguration().setLanguageLevel(ParserConfiguration.LanguageLevel.JAVA_17);
@@ -141,7 +145,14 @@ public class RepoIngestionService {
         }
       }
 
-      // STEP 6: update repository with counts and mark as PARSED
+      // STEP 6: build call graph (best-effort) and update repository with counts and mark as PARSED
+      try {
+        callGraphService.buildCallGraph(repoDir, repo);
+      } catch (Exception e) {
+        System.err.println("Call graph build failed: " + e.getMessage());
+        e.printStackTrace();
+      }
+
       repo.setClassCount(classCount.get());
       repo.setMethodCount(methodCount.get());
       repo.setParseFailureCount(parseFailureCount.get());
